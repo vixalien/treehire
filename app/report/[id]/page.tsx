@@ -19,6 +19,7 @@ import {
   Calendar,
   Clock,
   ExternalLink,
+  UserCheck,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -49,7 +50,30 @@ export default function ReportPage() {
         .single()
 
       if (interviewError) throw interviewError
-      setInterview(interviewData)
+
+      // Load profile information for the interviewer
+      let profileData = null
+      if (interviewData.user_id) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", interviewData.user_id)
+          .single()
+
+        if (profileError && profileError.code !== "PGRST116") {
+          console.error("Error loading profile:", profileError)
+        } else {
+          profileData = profile
+        }
+      }
+
+      // Combine interview with profile
+      const interviewWithProfile = {
+        ...interviewData,
+        profiles: profileData,
+      }
+
+      setInterview(interviewWithProfile)
 
       // Load questions
       const { data: questionsData, error: questionsError } = await supabase
@@ -297,29 +321,52 @@ export default function ReportPage() {
           </Card>
         </div>
 
-        {/* Interview Timing Info */}
-        {interview.start_time && (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-600">
-                    Started: {new Date(interview.start_time).toLocaleString()}
-                  </span>
-                </div>
-                {interview.end_time && (
+        {/* Interview Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Interview Timing */}
+          {interview.start_time && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-500 mr-2" />
+                    <Calendar className="h-5 w-5 text-gray-500 mr-2" />
                     <span className="text-sm text-gray-600">
-                      Ended: {new Date(interview.end_time).toLocaleString()}
+                      Started: {new Date(interview.start_time).toLocaleString()}
                     </span>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  {interview.end_time && (
+                    <div className="flex items-center">
+                      <Clock className="h-5 w-5 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-600">
+                        Ended: {new Date(interview.end_time).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Interviewer Info */}
+          {interview.profiles && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <UserCheck className="h-5 w-5 text-green-500 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      Interviewer: {interview.profiles.full_name || "Unknown"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {interview.profiles.role && `${interview.profiles.role} • `}
+                      {interview.profiles.company || interview.profiles.email}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Attached Documents */}
         <Card className="mb-6">

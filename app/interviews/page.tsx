@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { supabase, type Interview } from "@/lib/supabase"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Plus, User, Briefcase, Trash2, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -13,18 +14,46 @@ export default function InterviewsPage() {
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { user } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
-    loadInterviews()
-  }, [])
+    if (user) {
+      loadInterviews()
+    }
+  }, [user])
 
   const loadInterviews = async () => {
     try {
-      const { data, error } = await supabase.from("interviews").select("*").order("created_at", { ascending: false })
+      // First get interviews for the current user
+      const { data: interviewsData, error: interviewsError } = await supabase
+        .from("interviews")
+        .select("*")
+        .order("created_at", { ascending: false })
 
-      if (error) throw error
-      setInterviews(data)
+      if (interviewsError) throw interviewsError
+
+      // Then get profile information for each unique user_id
+      const userIds = [...new Set(interviewsData.map((interview) => interview.user_id).filter(Boolean))]
+
+      let profilesData = []
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase.from("profiles").select("*").in("id", userIds)
+
+        if (profilesError && profilesError.code !== "PGRST116") {
+          console.error("Error loading profiles:", profilesError)
+        } else {
+          profilesData = profiles || []
+        }
+      }
+
+      // Combine interviews with their corresponding profiles
+      const interviewsWithProfiles = interviewsData.map((interview) => ({
+        ...interview,
+        profiles: profilesData.find((profile) => profile.id === interview.user_id) || null,
+      }))
+
+      setInterviews(interviewsWithProfiles)
     } catch (error) {
       console.error("Error loading interviews:", error)
       toast({
@@ -126,7 +155,15 @@ export default function InterviewsPage() {
                     </Button>
                   </div>
                 </div>
-                <CardDescription>Created {new Date(interview.created_at).toLocaleDateString()}</CardDescription>
+                <CardDescription>
+                  Created {new Date(interview.created_at).toLocaleDateString()}
+                  {interview.profiles && (
+                    <span className="block text-xs text-green-600 mt-1">
+                      Interviewer: {interview.profiles.full_name || "Unknown"}
+                      {interview.profiles.company && ` • ${interview.profiles.company}`}
+                    </span>
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 mb-4">

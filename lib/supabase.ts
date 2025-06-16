@@ -28,6 +28,8 @@ export type Interview = {
   weaknesses?: string
   recommendation?: string
   confidence_score?: number
+  user_id?: string
+  profiles?: Profile
 }
 
 export type Question = {
@@ -56,4 +58,14 @@ export type Transcript = {
   timestamp_start: string
   speaker: "interviewer" | "candidate"
   created_at: string
+}
+
+export type Profile = {
+  id: string
+  email?: string
+  full_name?: string
+  company?: string
+  role?: string
+  created_at: string
+  updated_at: string
 }

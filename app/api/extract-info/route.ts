@@ -43,43 +43,70 @@ ${jobRequirements}`,
     })
 
     if (!response.ok) {
-      throw new Error("Failed to extract information")
+      const errorText = await response.text()
+      console.error("OpenRouter API error:", response.status, errorText)
+      throw new Error(`OpenRouter API error: ${response.status}`)
     }
 
     const data = await response.json()
-    let content = data.choices[0].message.content.trim()
+    const content = data.choices[0].message.content.trim()
 
-    // Try to extract JSON from the response if it contains extra text
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      content = jsonMatch[0]
-    }
+    console.log("Raw extraction response:", content)
 
-    // Clean up any markdown formatting
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "")
-
+    // Try to extract and parse JSON
+    let extractedInfo
     try {
-      const extractedInfo = JSON.parse(content)
-      return NextResponse.json(extractedInfo)
+      // First, try to parse directly
+      extractedInfo = JSON.parse(content)
     } catch (parseError) {
-      console.error("JSON Parse Error:", parseError)
-      console.error("Content received:", content)
-      // Return empty values if parsing fails
-      return NextResponse.json({
-        candidateName: "",
-        position: "",
-        title: "",
-      })
+      console.log("Direct parse failed, trying to extract JSON...")
+
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+      if (jsonMatch) {
+        try {
+          extractedInfo = JSON.parse(jsonMatch[1])
+        } catch (extractError) {
+          console.error("Failed to parse extracted JSON:", extractError)
+          throw new Error("Invalid JSON in code block")
+        }
+      } else {
+        // Try to find JSON object in the text
+        const objectMatch = content.match(/\{[\s\S]*?\}/)
+        if (objectMatch) {
+          try {
+            extractedInfo = JSON.parse(objectMatch[0])
+          } catch (objectError) {
+            console.error("Failed to parse object match:", objectError)
+            throw new Error("Invalid JSON object found")
+          }
+        } else {
+          console.error("No JSON found in response:", content)
+          throw new Error("No valid JSON found in response")
+        }
+      }
     }
+
+    // Validate and provide defaults
+    const result = {
+      candidateName: extractedInfo.candidateName || "",
+      position: extractedInfo.position || "",
+      title: extractedInfo.title || "",
+    }
+
+    console.log("Successfully extracted info:", result)
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Error extracting information:", error)
-    return NextResponse.json(
-      {
-        candidateName: "",
-        position: "",
-        title: "",
-      },
-      { status: 200 },
-    ) // Return empty values instead of error
+
+    // Return empty values instead of error to prevent blocking the flow
+    const fallbackResult = {
+      candidateName: "",
+      position: "",
+      title: "",
+    }
+
+    console.log("Returning fallback extraction result due to error")
+    return NextResponse.json(fallbackResult, { status: 200 })
   }
 }

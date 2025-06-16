@@ -14,11 +14,13 @@ import { generateQuestions } from "@/lib/openrouter"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Sparkles, FileText, User, Loader2 } from "lucide-react"
 
 export function InterviewSetup() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     title: "",
@@ -161,10 +163,19 @@ export function InterviewSetup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create an interview.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
-      // Create interview record
+      // Create interview record with user_id
       const { data: interview, error: interviewError } = await supabase
         .from("interviews")
         .insert({
@@ -175,6 +186,7 @@ export function InterviewSetup() {
           job_requirements_url: jobRequirementsUrl,
           cover_letter_url: coverLetterUrl || null,
           status: "draft",
+          user_id: user.id,
         })
         .select()
         .single()
