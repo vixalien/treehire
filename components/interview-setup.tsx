@@ -14,7 +14,7 @@ import { generateQuestions } from "@/lib/openrouter"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { Sparkles, FileText, User } from "lucide-react"
+import { Sparkles, FileText, User, Loader2 } from "lucide-react"
 
 export function InterviewSetup() {
   const router = useRouter()
@@ -56,8 +56,8 @@ export function InterviewSetup() {
     setExtracting(true)
     try {
       toast({
-        title: "Extracting Information",
-        description: "AI is analyzing your documents to pre-fill interview details...",
+        title: "Analyzing Documents",
+        description: "AI is extracting key information to pre-fill interview details...",
       })
 
       const response = await fetch("/api/extract-info", {
@@ -75,16 +75,16 @@ export function InterviewSetup() {
         const { candidateName, position, title } = await response.json()
 
         const updatedFields = []
-        if (candidateName && !formData.candidateName) {
-          setFormData((prev) => ({ ...prev, candidateName }))
+        if (candidateName && candidateName.trim() && !formData.candidateName) {
+          setFormData((prev) => ({ ...prev, candidateName: candidateName.trim() }))
           updatedFields.push("candidate name")
         }
-        if (position && !formData.position) {
-          setFormData((prev) => ({ ...prev, position }))
+        if (position && position.trim() && !formData.position) {
+          setFormData((prev) => ({ ...prev, position: position.trim() }))
           updatedFields.push("position")
         }
-        if (title && !formData.title) {
-          setFormData((prev) => ({ ...prev, title }))
+        if (title && title.trim() && !formData.title) {
+          setFormData((prev) => ({ ...prev, title: title.trim() }))
           updatedFields.push("interview title")
         }
 
@@ -101,6 +101,8 @@ export function InterviewSetup() {
             description: "Documents analyzed. Please fill in the interview details manually.",
           })
         }
+      } else {
+        throw new Error("Failed to extract information")
       }
     } catch (error) {
       console.error("Error extracting information:", error)
@@ -148,11 +150,11 @@ export function InterviewSetup() {
   }
 
   const handleContinueToDetails = async () => {
-    setStep(2)
-    // Trigger extraction when moving to step 2
+    // First extract information, then move to step 2
     if (resumeContent && jobRequirementsContent && !hasExtracted) {
       await extractInformation()
     }
+    setStep(2)
   }
 
   const canProceedToStep2 = resumeContent.trim() && jobRequirementsContent.trim()
@@ -358,10 +360,17 @@ export function InterviewSetup() {
             <div className="flex justify-end">
               <Button
                 onClick={handleContinueToDetails}
-                disabled={!canProceedToStep2}
-                className="bg-green-600 hover:bg-green-700"
+                disabled={!canProceedToStep2 || extracting}
+                className={extracting ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}
               >
-                Continue to Details
+                {extracting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing Documents...
+                  </>
+                ) : (
+                  "Continue to Details"
+                )}
               </Button>
             </div>
           </CardContent>

@@ -9,7 +9,17 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { supabase, type Interview, type Question, type Response, type Transcript } from "@/lib/supabase"
 import { analyzeInterview } from "@/lib/openrouter"
-import { ArrowLeft, BarChart3, FileText, MessageSquare, User, Briefcase, Calendar, Clock } from "lucide-react"
+import {
+  ArrowLeft,
+  BarChart3,
+  FileText,
+  MessageSquare,
+  User,
+  Briefcase,
+  Calendar,
+  Clock,
+  ExternalLink,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ReportPage() {
@@ -310,6 +320,77 @@ export default function ReportPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Attached Documents */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Attached Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {interview.resume_url && (
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-green-800">Resume</h4>
+                      <p className="text-sm text-green-600">Candidate's resume document</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={interview.resume_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {interview.job_requirements_url && (
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-blue-800">Job Requirements</h4>
+                      <p className="text-sm text-blue-600">Position requirements document</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={interview.job_requirements_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {interview.cover_letter_url && (
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-purple-800">Cover Letter</h4>
+                      <p className="text-sm text-purple-600">Candidate's cover letter</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={interview.cover_letter_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {!interview.resume_url && !interview.job_requirements_url && !interview.cover_letter_url && (
+              <p className="text-gray-500 text-center py-4">No documents attached to this interview</p>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Questions and Responses */}

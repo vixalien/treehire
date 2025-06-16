@@ -17,19 +17,16 @@ export async function POST(request: NextRequest) {
             role: "system",
             content: `You are an expert at extracting key information from resumes and job descriptions. 
             
-            Extract the following information and return a JSON object:
-            {
-              "candidateName": "Full name of the candidate from the resume",
-              "position": "Job title/position from the job requirements",
-              "title": "A descriptive interview title combining the position and candidate name"
-            }
+            You MUST return ONLY a valid JSON object with no additional text, explanations, or formatting. 
+            
+            Return exactly this structure:
+            {"candidateName": "Full name of the candidate from the resume", "position": "Job title/position from the job requirements", "title": "A descriptive interview title combining the position and candidate name"}
             
             Guidelines:
-            - For candidateName: Extract the full name, usually found at the top of the resume
-            - For position: Use the exact job title from the job requirements/description
-            - For title: Create a professional interview title like "Senior Developer Interview - John Smith" or "Marketing Manager Interview"
-            - If information is not clearly available, return empty string for that field
-            - Be conservative - only extract if you're confident about the information`,
+            - For candidateName: Extract the full name, usually found at the top of the resume. If not clearly available, return empty string.
+            - For position: Use the exact job title from the job requirements/description. If not clearly available, return empty string.
+            - For title: Create a professional interview title like "Senior Developer Interview - John Smith" or "Marketing Manager Interview". If no candidate name, just use position + "Interview".
+            - Return ONLY the JSON object, no other text whatsoever.`,
           },
           {
             role: "user",
@@ -41,7 +38,7 @@ ${jobRequirements}`,
           },
         ],
         temperature: 0.1,
-        max_tokens: 500,
+        max_tokens: 200,
       }),
     })
 
@@ -50,9 +47,30 @@ ${jobRequirements}`,
     }
 
     const data = await response.json()
-    const extractedInfo = JSON.parse(data.choices[0].message.content)
+    let content = data.choices[0].message.content.trim()
 
-    return NextResponse.json(extractedInfo)
+    // Try to extract JSON from the response if it contains extra text
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      content = jsonMatch[0]
+    }
+
+    // Clean up any markdown formatting
+    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "")
+
+    try {
+      const extractedInfo = JSON.parse(content)
+      return NextResponse.json(extractedInfo)
+    } catch (parseError) {
+      console.error("JSON Parse Error:", parseError)
+      console.error("Content received:", content)
+      // Return empty values if parsing fails
+      return NextResponse.json({
+        candidateName: "",
+        position: "",
+        title: "",
+      })
+    }
   } catch (error) {
     console.error("Error extracting information:", error)
     return NextResponse.json(
