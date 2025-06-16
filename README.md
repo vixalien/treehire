@@ -24,12 +24,12 @@ A comprehensive interview management application that uses AI to generate questi
 
 Create a `.env.local` file with the following variables:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 OPENROUTER_API_KEY=your_openrouter_api_key
-```
+\`\`\`
 
 ### 2. Database Setup
 
@@ -37,7 +37,7 @@ Run the following SQL scripts in your Supabase SQL Editor in order:
 
 #### Main Tables Setup (`scripts/001-create-tables.sql`):
 
-```sql
+\`\`\`sql
 -- Create interviews table
 CREATE TABLE IF NOT EXISTS interviews (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -90,11 +90,11 @@ CREATE TABLE IF NOT EXISTS transcripts (
 CREATE INDEX IF NOT EXISTS idx_questions_interview_id ON questions(interview_id);
 CREATE INDEX IF NOT EXISTS idx_responses_question_id ON responses(question_id);
 CREATE INDEX IF NOT EXISTS idx_transcripts_interview_id ON transcripts(interview_id);
-```
+\`\`\`
 
 #### Storage Setup (`scripts/002-setup-storage.sql`):
 
-```sql
+\`\`\`sql
 -- Create storage bucket for interview files
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
@@ -123,11 +123,11 @@ CREATE POLICY "Allow public updates" ON storage.objects
 
 CREATE POLICY "Allow public deletes" ON storage.objects
   FOR DELETE USING (bucket_id = 'interview-files');
-```
+\`\`\`
 
 #### Enhanced Analysis Fields (`scripts/003-update-interviews-table.sql`):
 
-```sql
+\`\`\`sql
 -- Add additional fields to store complete analysis
 ALTER TABLE interviews 
 ADD COLUMN IF NOT EXISTS overall_assessment TEXT,
@@ -135,11 +135,11 @@ ADD COLUMN IF NOT EXISTS strengths TEXT,
 ADD COLUMN IF NOT EXISTS weaknesses TEXT,
 ADD COLUMN IF NOT EXISTS recommendation VARCHAR(50),
 ADD COLUMN IF NOT EXISTS confidence_score DECIMAL(3,2);
-```
+\`\`\`
 
 #### Interview Timing (`scripts/004-add-interview-timing.sql`):
 
-```sql
+\`\`\`sql
 -- Add timing fields to interviews table
 ALTER TABLE interviews 
 ADD COLUMN IF NOT EXISTS start_time TIMESTAMP WITH TIME ZONE,
@@ -150,23 +150,23 @@ ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
 UPDATE interviews 
 SET start_time = created_at 
 WHERE start_time IS NULL;
-```
+\`\`\`
 
 ### 3. Install Dependencies
 
-```bash
+\`\`\`bash
 npm install
 # or
 yarn install
-```
+\`\`\`
 
 ### 4. Run the Application
 
-```bash
+\`\`\`bash
 npm run dev
 # or
 yarn dev
-```
+\`\`\`
 
 Visit `http://localhost:3000` to start using Treehire.
 
