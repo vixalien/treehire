@@ -12,6 +12,7 @@ export type Interview = {
   position: string
   resume_url?: string
   job_requirements_url?: string
+  cover_letter_url?: string
   status: "draft" | "in_progress" | "completed"
   created_at: string
   updated_at: string

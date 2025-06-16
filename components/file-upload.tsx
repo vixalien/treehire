@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload, File, X, AlertCircle } from "lucide-react"
@@ -10,15 +10,22 @@ import { supabase } from "@/lib/supabase"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface FileUploadProps {
-  onFileUploaded: (url: string, content: string) => void
+  onFileUploaded: (url: string, content: string, fileName?: string) => void
   accept: string
   label: string
+  existingFile?: string
+  existingContent?: string
 }
 
-export function FileUpload({ onFileUploaded, accept, label }: FileUploadProps) {
+export function FileUpload({ onFileUploaded, accept, label, existingFile, existingContent }: FileUploadProps) {
   const [uploading, setUploading] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<string | null>(existingFile || null)
   const [error, setError] = useState<string | null>(null)
+
+  // Update local state when props change
+  useEffect(() => {
+    setUploadedFile(existingFile || null)
+  }, [existingFile])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -69,7 +76,7 @@ export function FileUpload({ onFileUploaded, accept, label }: FileUploadProps) {
       const content = await extractTextFromFile(file)
 
       setUploadedFile(file.name)
-      onFileUploaded(publicUrl, content)
+      onFileUploaded(publicUrl, content, file.name)
     } catch (error: any) {
       console.error("Error uploading file:", error)
       setError(error.message || "Failed to upload file. Please try again.")
@@ -105,8 +112,11 @@ Note: This is a placeholder for ${fileType} content. In a production environment
   const removeFile = () => {
     setUploadedFile(null)
     setError(null)
-    onFileUploaded("", "")
+    onFileUploaded("", "", "")
   }
+
+  // Show existing content if available
+  const hasContent = uploadedFile || (existingContent && existingContent.trim().length > 0)
 
   return (
     <Card>
@@ -118,7 +128,7 @@ Note: This is a placeholder for ${fileType} content. In a production environment
           </Alert>
         )}
 
-        {!uploadedFile ? (
+        {!hasContent ? (
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <Upload className="mx-auto h-12 w-12 text-gray-400" />
             <div className="mt-4">
@@ -149,7 +159,12 @@ Note: This is a placeholder for ${fileType} content. In a production environment
           <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
             <div className="flex items-center">
               <File className="h-5 w-5 text-green-600" />
-              <span className="ml-2 text-sm font-medium text-green-900">{uploadedFile}</span>
+              <span className="ml-2 text-sm font-medium text-green-900">
+                {uploadedFile || "Content added"}
+                {existingContent && !uploadedFile && (
+                  <span className="text-xs text-green-700 block">({existingContent.length} characters)</span>
+                )}
+              </span>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={removeFile}>
               <X className="h-4 w-4" />

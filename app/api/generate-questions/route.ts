@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { resume, jobRequirements, customQuestions } = await request.json()
+    const { resume, jobRequirements, customQuestions, coverLetter } = await request.json()
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: "system",
-            content: `You are an expert interviewer. Generate relevant interview questions based on the candidate's resume and job requirements. 
+            content: `You are an expert interviewer. Generate relevant interview questions based on the candidate's resume, job requirements, and optional cover letter. 
             
             Return a JSON array of questions with the following structure:
             [
@@ -32,12 +32,19 @@ export async function POST(request: NextRequest) {
             - Behavioral questions based on experience
             - Situational questions
             - Questions about gaps or areas for growth
+            - If cover letter is provided, include questions about motivations and specific points mentioned
             
             Make questions specific to the candidate's background and the role.`,
           },
           {
             role: "user",
-            content: `Resume: ${resume}\n\nJob Requirements: ${jobRequirements}\n\nCustom Questions to Include: ${customQuestions.join(", ")}`,
+            content: `Resume: ${resume}
+
+Job Requirements: ${jobRequirements}
+
+${coverLetter ? `Cover Letter: ${coverLetter}` : ""}
+
+Custom Questions to Include: ${customQuestions.join(", ")}`,
           },
         ],
         temperature: 0.7,

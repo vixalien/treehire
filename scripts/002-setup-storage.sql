@@ -15,7 +15,7 @@ VALUES (
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Enable RLS on storage.objects if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Allow public uploads" ON storage.objects;

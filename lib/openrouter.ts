@@ -1,4 +1,9 @@
-export async function generateQuestions(resume: string, jobRequirements: string, customQuestions: string[]) {
+export async function generateQuestions(
+  resume: string,
+  jobRequirements: string,
+  customQuestions: string[],
+  coverLetter?: string,
+) {
   const response = await fetch("/api/generate-questions", {
     method: "POST",
     headers: {
@@ -8,6 +13,7 @@ export async function generateQuestions(resume: string, jobRequirements: string,
       resume,
       jobRequirements,
       customQuestions,
+      coverLetter,
     }),
   })
 
