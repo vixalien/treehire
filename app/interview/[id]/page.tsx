@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LiveTranscript } from "@/components/live-transcript"
 import { supabase, type Interview, type Question, type Response } from "@/lib/supabase"
 import { analyzeInterview } from "@/lib/openrouter"
-import { ChevronLeft, ChevronRight, Save, BarChart3, CheckCircle, Trash2, AlertCircle, Play, Clock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Save, BarChart3, CheckCircle, Trash2, AlertCircle, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function InterviewPage() {
@@ -65,6 +65,26 @@ export default function InterviewPage() {
       if (interviewError) throw interviewError
       setInterview(interviewData)
       setInterviewStarted(!!interviewData.start_time && interviewData.status !== "draft")
+
+      // After setting interview data, auto-start if it's a draft
+      if (interviewData.status === "draft" && !interviewData.start_time) {
+        // Auto-start the interview
+        const startTime = new Date().toISOString()
+
+        const { error: startError } = await supabase
+          .from("interviews")
+          .update({
+            start_time: startTime,
+            status: "in_progress",
+          })
+          .eq("id", interviewId)
+
+        if (!startError) {
+          interviewData.start_time = startTime
+          interviewData.status = "in_progress"
+          setInterviewStarted(true)
+        }
+      }
 
       // Load questions
       const { data: questionsData, error: questionsError } = await supabase
@@ -157,9 +177,9 @@ export default function InterviewPage() {
   }
 
   const validateScore = (score: string) => {
-    const numScore = Number.parseFloat(score)
-    if (score && (isNaN(numScore) || numScore < 0 || numScore > 10)) {
-      setScoreError("Score must be between 0 and 10")
+    const numScore = Number.parseInt(score)
+    if (score && (isNaN(numScore) || numScore < 0 || numScore > 10 || !Number.isInteger(Number(score)))) {
+      setScoreError("Score must be a whole number between 0 and 10")
       return false
     }
     setScoreError("")
@@ -195,7 +215,7 @@ export default function InterviewPage() {
           .from("responses")
           .update({
             answer_text: currentResponse.answer,
-            score: currentResponse.score ? Number.parseFloat(currentResponse.score) : null,
+            score: currentResponse.score ? Number.parseInt(currentResponse.score) : null,
             notes: currentResponse.notes,
             updated_at: new Date().toISOString(),
           })
@@ -209,7 +229,7 @@ export default function InterviewPage() {
               ? {
                   ...r,
                   answer_text: currentResponse.answer,
-                  score: Number.parseFloat(currentResponse.score) || undefined,
+                  score: Number.parseInt(currentResponse.score) || undefined,
                   notes: currentResponse.notes,
                 }
               : r,
@@ -222,7 +242,7 @@ export default function InterviewPage() {
           .insert({
             question_id: questionId,
             answer_text: currentResponse.answer,
-            score: currentResponse.score ? Number.parseFloat(currentResponse.score) : null,
+            score: currentResponse.score ? Number.parseInt(currentResponse.score) : null,
             notes: currentResponse.notes,
           })
           .select()
@@ -419,31 +439,12 @@ export default function InterviewPage() {
               )}
             </div>
             <div className="flex gap-2">
-              {!interviewStarted && interview?.status === "draft" && (
-                <Button
-                  onClick={startInterview}
-                  disabled={startingInterview}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  {startingInterview ? "Starting..." : "Start Interview"}
-                </Button>
-              )}
               <Button variant="destructive" onClick={deleteInterview} disabled={deleting}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 {deleting ? "Deleting..." : "Delete Interview"}
               </Button>
             </div>
           </div>
-
-          {!interviewStarted && interview?.status === "draft" && (
-            <Alert className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Click "Start Interview" to begin timing and mark the interview as in progress.
-              </AlertDescription>
-            </Alert>
-          )}
 
           <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
             <div
@@ -492,7 +493,7 @@ export default function InterviewPage() {
                         type="number"
                         min="0"
                         max="10"
-                        step="0.1"
+                        step="1"
                         value={currentResponse.score}
                         onChange={(e) => handleScoreChange(e.target.value)}
                         placeholder="0-10"
